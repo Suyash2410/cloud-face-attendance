@@ -1,0 +1,20 @@
+{
+  "name": "haazri-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Haazri - Cloud Face Attendance System for Colleges",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix frontend run test",
+    "mock:server": "npm --prefix mock-server start"
+  },
+  "keywords": [
+    "attendance",
+    "facial-recognition",
+    "aws-rekognition",
+    "education"
+  ],
+  "author": "Haazri Team",
+  "license": "MIT"
+}

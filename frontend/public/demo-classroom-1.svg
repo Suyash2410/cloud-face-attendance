@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D3748" />
+      <stop offset="60%" stop-color="#1A202C" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="boardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14342B" />
+      <stop offset="100%" stop-color="#0E231D" />
+    </linearGradient>
+    <linearGradient id="skin1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E5A65E" />
+      <stop offset="100%" stop-color="#C68642" />
+    </linearGradient>
+    <linearGradient id="skin2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F1C27D" />
+      <stop offset="100%" stop-color="#E0AC69" />
+    </linearGradient>
+    <linearGradient id="deskGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4A5568" />
+      <stop offset="100%" stop-color="#2D3748" />
+    </linearGradient>
+  </defs>
+
+  <!-- Classroom background -->
+  <rect width="1000" height="650" fill="url(#bgGrad)" />
+
+  <!-- Blackboard / Projection screen in background -->
+  <rect x="180" y="25" width="640" height="90" rx="4" fill="url(#boardGrad)" stroke="#4A5568" stroke-width="3" />
+  <text x="500" y="65" font-family="'JetBrains Mono', monospace" font-size="16" fill="#A0AEC0" text-anchor="middle">
+    TE-C Cloud Computing • Distributed Consensus &amp; Raft
+  </text>
+  <text x="500" y="90" font-family="'JetBrains Mono', monospace" font-size="12" fill="#718096" text-anchor="middle">
+    Prof. Sunita Kulkarni — Session 42
+  </text>
+
+  <!-- Row 1 Desks (Back) -->
+  <rect x="50" y="235" width="900" height="28" rx="3" fill="url(#deskGrad)" opacity="0.9" />
+
+  <!-- Row 1 Students (Back row: y around 130-230) -->
+  <!-- Student 1: x: 120-230, y: 140-250 (Box: left 0.12, top 0.22, w 0.11, h 0.18) -->
+  <g id="student-1">
+    <ellipse cx="175" cy="180" rx="38" ry="46" fill="url(#skin1)" />
+    <!-- Hair -->
+    <path d="M135 175 Q175 125 215 175 Q210 140 175 138 Q140 140 135 175 Z" fill="#1A202C" />
+    <!-- Shoulders -->
+    <path d="M120 240 Q175 220 230 240 L235 255 L115 255 Z" fill="#2B6CB0" />
+  </g>
+
+  <!-- Student 2: x: 280-380 (Box: left 0.28, top 0.24, w 0.10, h 0.17) -->
+  <g id="student-2">
+    <ellipse cx="330" cy="195" rx="36" ry="44" fill="url(#skin2)" />
+    <path d="M294 190 Q330 145 366 190 Q360 155 330 153 Q300 155 294 190 Z" fill="#2D3748" />
+    <path d="M275 250 Q330 230 385 250 L390 260 L270 260 Z" fill="#9B2C2C" />
+  </g>
+
+  <!-- Student 3: x: 440-560 (Box: left 0.44, top 0.21, w 0.12, h 0.19) -->
+  <g id="student-3">
+    <ellipse cx="500" cy="180" rx="40" ry="48" fill="url(#skin1)" />
+    <path d="M458 175 Q500 120 542 175 Q535 135 500 133 Q465 135 458 175 Z" fill="#1A202C" />
+    <path d="M440 240 Q500 220 560 240 L565 255 L435 255 Z" fill="#2C7A7B" />
+  </g>
+
+  <!-- Student 4: x: 600-710 (Box: left 0.60, top 0.23, w 0.11, h 0.18) -->
+  <g id="student-4">
+    <ellipse cx="655" cy="190" rx="38" ry="45" fill="url(#skin2)" />
+    <path d="M615 185 Q655 135 695 185 Q690 148 655 146 Q620 148 615 185 Z" fill="#4A5568" />
+    <path d="M595 245 Q655 225 715 245 L720 260 L590 260 Z" fill="#D69E2E" />
+  </g>
+
+  <!-- Row 2 Desks (Front) -->
+  <rect x="40" y="440" width="920" height="36" rx="4" fill="url(#deskGrad)" />
+
+  <!-- Row 2 Students (Front row: y around 310-450) -->
+  <!-- Student 5: x: 150-280 (Box: left 0.15, top 0.48, w 0.13, h 0.22) -->
+  <g id="student-5">
+    <ellipse cx="215" cy="385" rx="52" ry="62" fill="url(#skin2)" />
+    <path d="M160 375 Q215 305 270 375 Q262 320 215 318 Q168 320 160 375 Z" fill="#171923" />
+    <path d="M140 460 Q215 430 290 460 L295 480 L135 480 Z" fill="#319795" />
+  </g>
+
+  <!-- Student 6: x: 350-490 (Box: left 0.35, top 0.50, w 0.14, h 0.23) -->
+  <g id="student-6">
+    <ellipse cx="420" cy="395" rx="54" ry="64" fill="url(#skin1)" />
+    <path d="M363 385 Q420 315 477 385 Q470 328 420 326 Q370 328 363 385 Z" fill="#2D3748" />
+    <path d="M340 470 Q420 440 500 470 L505 490 L335 490 Z" fill="#C53030" />
+  </g>
+
+  <!-- Student 7: x: 550-680 (Box: left 0.55, top 0.49, w 0.13, h 0.21) -->
+  <g id="student-7">
+    <ellipse cx="615" cy="385" rx="50" ry="60" fill="url(#skin2)" />
+    <path d="M562 375 Q615 310 668 375 Q660 325 615 323 Q570 325 562 375 Z" fill="#1A202C" />
+    <path d="M540 460 Q615 430 690 460 L695 480 L535 480 Z" fill="#4C51BF" />
+  </g>
+
+  <!-- Student 8 (Unknown / Turn away): x: 740-860 (Box: left 0.74, top 0.47, w 0.12, h 0.20) -->
+  <g id="student-8">
+    <ellipse cx="800" cy="375" rx="48" ry="58" fill="url(#skin1)" />
+    <!-- Looking sideways / shadowy -->
+    <path d="M750 365 Q800 300 850 365 Q840 315 800 313 Q760 315 750 365 Z" fill="#1A202C" />
+    <path d="M730 450 Q800 420 870 450 L875 470 L725 470 Z" fill="#718096" />
+  </g>
+
+  <!-- Foreground teacher podium outline on the side -->
+  <path d="M0 550 L120 530 L130 650 L0 650 Z" fill="#1A202C" stroke="#2D3748" stroke-width="2" />
+</svg>

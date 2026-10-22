@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --color-paper: #F5F0E6;
+  --color-surface: #FFFBF3;
+  --color-surface-hover: #EFE8DA;
+  --color-ink: #1B1A17;
+  --color-muted: #6B655A;
+  --color-hairline: #E3DBC9;
+
+  --color-marigold: #E8A317;
+  --color-marigold-light: #FEF7E6;
+  --color-teal: #0F5C5A;
+  --color-teal-light: #E6F0F0;
+  --color-brick: #B5412A;
+  --color-brick-light: #FBEBE8;
+  --color-indigo: #2B3A67;
+  --color-indigo-light: #ECEFF7;
+}
+
+.dark {
+  --color-paper: #12110F;
+  --color-surface: #1C1A17;
+  --color-surface-hover: #26231F;
+  --color-ink: #F5F0E6;
+  --color-muted: #9E9689;
+  --color-hairline: #2E2A24;
+
+  --color-marigold: #F5B838;
+  --color-marigold-light: #2C1F04;
+  --color-teal: #1EB2AF;
+  --color-teal-light: #062322;
+  --color-brick: #E0583F;
+  --color-brick-light: #2E100A;
+  --color-indigo: #6784D6;
+  --color-indigo-light: #0D1429;
+}
+
+@theme {
+  --color-paper: var(--color-paper);
+  --color-surface: var(--color-surface);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-ink: var(--color-ink);
+  --color-muted: var(--color-muted);
+  --color-hairline: var(--color-hairline);
+
+  --color-marigold: var(--color-marigold);
+  --color-marigold-light: var(--color-marigold-light);
+  --color-teal: var(--color-teal);
+  --color-teal-light: var(--color-teal-light);
+  --color-brick: var(--color-brick);
+  --color-brick-light: var(--color-brick-light);
+  --color-indigo: var(--color-indigo);
+  --color-indigo-light: var(--color-indigo-light);
+
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Base resets & typography */
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  background-image: radial-gradient(rgba(27, 26, 23, 0.035) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark body {
+  background-image: radial-gradient(rgba(245, 240, 230, 0.035) 1px, transparent 1px);
+}
+
+/* Hairline border styling */
+.border-hairline {
+  border-color: var(--color-hairline);
+}
+
+/* Editorial Print Shadow */
+.editorial-shadow {
+  box-shadow: 2px 2px 0px 0px var(--color-hairline);
+}
+
+.editorial-shadow-lg {
+  box-shadow: 4px 4px 0px 0px var(--color-hairline);
+}
+
+/* Animated scan-line for photo processing */
+@keyframes scanline {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scanline {
+  animation: scanline 2.2s ease-in-out infinite alternate;
+}
+
+/* Pulse glow for matched boxes */
+@keyframes boxPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(15, 92, 90, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(15, 92, 90, 0.9);
+  }
+}
+
+.matched-box-pulse {
+  animation: boxPulse 2s ease-in-out infinite;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    background-image: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

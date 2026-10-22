@@ -1,0 +1,28 @@
+# Environment & Credentials
+.env
+.env.*
+!.env.example
+LIVE_CREDENTIALS.local.md
+*.local.md
+*.local
+
+# Dependencies
+node_modules/
+dist/
+dist-ssr/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# AWS SAM build artifacts
+.aws-sam/
+samconfig.toml
+
+# Logs & System
+*.log
+*.zip
+.DS_Store
+Thumbs.db

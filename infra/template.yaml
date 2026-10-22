@@ -1,0 +1,504 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Haazri - Cloud Face Attendance System for Colleges (AWS SAM Template)
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 1024
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        STUDENTS_TABLE: !Ref StudentsTable
+        CLASSES_TABLE: !Ref ClassesTable
+        SESSIONS_TABLE: !Ref SessionsTable
+        ATTENDANCE_TABLE: !Ref AttendanceTable
+        AUDIT_TABLE: !Ref AuditTable
+        SETTINGS_TABLE: !Ref SettingsTable
+        PHOTOS_BUCKET: !Ref PhotosBucket
+        REKOGNITION_COLLECTION: haazri-faces
+        SES_SENDER_EMAIL: attendance-alerts@haazri.edu
+
+Resources:
+  # ============================================================================
+  # 0. LAMBDA LAYERS
+  # ============================================================================
+  PillowLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: haazri-pillow-layer
+      Description: Pillow 12.2.0 binary layer for Python 3.12 x86_64
+      ContentUri: layers/pillow/
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Retain
+
+  # ============================================================================
+  # 1. COGNITO USER POOL & ROLE GROUPS
+  # ============================================================================
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: haazri-user-pool
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: haazri-spa-client
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+
+  AdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: admin
+      Description: College department heads and exam cell administrators
+      UserPoolId: !Ref CognitoUserPool
+
+  TeacherGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: teacher
+      Description: Faculty members authorized to mark and review attendance
+      UserPoolId: !Ref CognitoUserPool
+
+  StudentGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: student
+      Description: Enrolled students with read-only access to attendance rings
+      UserPoolId: !Ref CognitoUserPool
+
+  # ============================================================================
+  # 2. S3 OBJECT STORAGE (Photos & Static Web Hosting)
+  # ============================================================================
+  PhotosBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'haazri-photos-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireClassroomPhotosAfter30Days
+            Status: Enabled
+            Prefix: sessions/
+            ExpirationInDays: 30
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, HEAD]
+            AllowedOrigins:
+              - 'http://localhost:3000'
+              - 'http://localhost:5173'
+              - 'http://127.0.0.1:3000'
+              - 'http://127.0.0.1:5173'
+              - '*'
+            MaxAge: 3000
+
+  WebHostingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'haazri-web-${AWS::AccountId}-${AWS::Region}'
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  # ============================================================================
+  # 3. DYNAMODB TABLES
+  # ============================================================================
+  StudentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: haazri-students
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: studentId
+          AttributeType: S
+        - AttributeName: division
+          AttributeType: S
+      KeySchema:
+        - AttributeName: studentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: DivisionIndex
+          KeySchema:
+            - AttributeName: division
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  ClassesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: haazri-classes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: classId
+          AttributeType: S
+        - AttributeName: teacherId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: classId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: TeacherIndex
+          KeySchema:
+            - AttributeName: teacherId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: haazri-sessions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: classId
+          AttributeType: S
+        - AttributeName: dateSlot
+          AttributeType: S
+      KeySchema:
+        - AttributeName: classId
+          KeyType: HASH
+        - AttributeName: dateSlot
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+
+  AttendanceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: haazri-attendance
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: studentId
+          AttributeType: S
+        - AttributeName: date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+        - AttributeName: studentId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: StudentHistoryIndex
+          KeySchema:
+            - AttributeName: studentId
+              KeyType: HASH
+            - AttributeName: date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  AuditTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: haazri-audit
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: date
+          AttributeType: S
+        - AttributeName: timestampId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: date
+          KeyType: HASH
+        - AttributeName: timestampId
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+
+  SettingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: haazri-settings
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+
+  # ============================================================================
+  # 4. HTTP API GATEWAY WITH JWT AUTHORIZER
+  # ============================================================================
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - Authorization
+          - Content-Type
+          - X-Amz-Date
+          - X-Api-Key
+        AllowOrigins:
+          - 'http://localhost:3000'
+          - 'http://localhost:5173'
+          - 'http://127.0.0.1:3000'
+          - 'http://127.0.0.1:5173'
+          - '*'
+
+  # ============================================================================
+  # 5. LAMBDA FUNCTIONS
+  # ============================================================================
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: handler.lambda_handler
+      Events:
+        GetMe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /me
+            Method: GET
+
+  StudentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/students/
+      Handler: handler.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StudentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AttendanceTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ClassesTable
+        - S3CrudPolicy:
+            BucketName: !Sub 'haazri-photos-${AWS::AccountId}-${AWS::Region}'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:DetectFaces
+                - rekognition:IndexFaces
+                - rekognition:DeleteFaces
+              Resource: '*'
+      Events:
+        StudentsRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /students
+            Method: ANY
+        StudentsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /students/{proxy+}
+            Method: ANY
+
+  ClassesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/classes/
+      Handler: handler.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ClassesTable
+      Events:
+        ClassesRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /classes
+            Method: ANY
+        ClassesProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /classes/{proxy+}
+            Method: ANY
+
+  SessionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/sessions/
+      Handler: handler.lambda_handler
+      Layers:
+        - !Ref PillowLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AttendanceTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ClassesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StudentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AuditTable
+        - S3CrudPolicy:
+            BucketName: !Sub 'haazri-photos-${AWS::AccountId}-${AWS::Region}'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:DetectFaces
+                - rekognition:SearchFacesByImage
+              Resource: '*'
+      Events:
+        SessionsRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions
+            Method: ANY
+        SessionsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{proxy+}
+            Method: ANY
+
+  AnalyticsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/analytics/
+      Handler: handler.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AttendanceTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref ClassesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref StudentsTable
+      Events:
+        AnalyticsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /analytics/{proxy+}
+            Method: ANY
+
+  SettingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/settings/
+      Handler: handler.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SettingsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AuditTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref StudentsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AttendanceTable
+      Events:
+        SettingsRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /settings
+            Method: ANY
+        AuditRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /audit
+            Method: ANY
+        NotifsRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /notifications
+            Method: ANY
+        NotifsProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /notifications/{proxy+}
+            Method: ANY
+        AlertsRun:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /alerts/shortage/run
+            Method: ANY
+
+  AlertsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/alerts/
+      Handler: handler.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AttendanceTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref StudentsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref SettingsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 14 * * ? *)
+            Description: Trigger daily attendance shortage warnings
+
+Outputs:
+  HttpApiUrl:
+    Description: HTTP API Gateway endpoint URL
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+  CognitoClientId:
+    Description: Cognito App Client ID
+    Value: !Ref CognitoUserPoolClient
+  PhotosBucketName:
+    Description: Private Photos S3 Bucket
+    Value: !Ref PhotosBucket
